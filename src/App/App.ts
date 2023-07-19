@@ -1,16 +1,15 @@
-import { ACESFilmicToneMapping, Clock, sRGBEncoding, WebGLRenderer, MathUtils } from 'three';
+import { Clock, ReinhardToneMapping, Vector2, WebGLRenderer } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
-
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass';
+import { SAOPass } from 'three/examples/jsm/postprocessing/SAOPass';
 import { ORBIT_DAMPING, INTERSECTION_THRESHOLD } from './constants';
 import { AppScene } from './Scene';
 import { createCamera, isMobile } from './utils';
 
 const IS_DESKTOP = !isMobile();
-
-
 
 export class App {
   private scene;
@@ -29,49 +28,52 @@ export class App {
     this.onShow();
   }
 
-  public get dimensions() {
+  public static get dimensions() {
     // const container = this.renderer.domElement.parentElement;
 
-    const container = document.querySelector('.planet__img')
+    const container = document.querySelector('.planet__img');
 
     return [container.clientWidth, container.clientHeight];
   }
 
-  public  get aspect() {
-    const [w, h] = this.dimensions;
+  public static get aspect() {
+    const [w, h] = App.dimensions;
     return w / h;
   }
 
   private init(canvas) {
-
     this.renderer = new WebGLRenderer({
       alpha: true,
       antialias: true,
       canvas,
     });
 
-    const [w, h] = this.dimensions;
+    const [w, h] = App.dimensions;
 
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(window.devicePixelRatio);
 
-    this.renderer.outputEncoding = sRGBEncoding;
-    this.renderer.toneMapping = ACESFilmicToneMapping;
-
-
-    this.renderer.physicallyCorrectLights = true;
-    // renderer.outputEncoding = THREE.GammaEncoding;
-    // renderer.setSize(window.innerWidth, window.innerHeight);
-    // renderer.setPixelRatio(window.devicePixelRatio ? window.devicePixelRatio : 1)
-
-
     this.composer = new EffectComposer(this.renderer);
 
-    this.scene = new AppScene(createCamera(this.aspect));
+    this.scene = new AppScene(this.renderer, createCamera(App.aspect));
 
     const { scene, camera } = this.scene;
 
-    this.composer.insertPass(new RenderPass(scene, camera), 0)
+    const bloomPass = new UnrealBloomPass(
+      new Vector2(window.innerWidth, window.innerHeight),
+      1.5,
+      0.4,
+      0.85,
+    );
+
+    bloomPass.threshold = 0.1;
+    bloomPass.strength = 0.05;
+    bloomPass.radius = 0.5;
+
+    const outputPass = new OutputPass(ReinhardToneMapping, 1.1);
+    this.composer.addPass(bloomPass);
+    this.composer.addPass(outputPass);
+    this.composer.insertPass(new RenderPass(scene, camera), 0);
 
     if (IS_DESKTOP) {
       // this.composer.addPass(this.antialiasPass());
@@ -91,7 +93,6 @@ export class App {
   public animate() {
     this.frameId = window.requestAnimationFrame(() => this.animate());
 
-
     try {
       const delta = this.clock.getDelta();
       this.scene.animate(delta);
@@ -102,7 +103,6 @@ export class App {
       console.error(e);
       return;
     }
-
   }
 
   public stopAnimation() {
@@ -110,28 +110,22 @@ export class App {
   }
 
   onResize() {
-
-    const onWindowResize = () => {
-      this.scene.camera.aspect = this.aspect;
-      this.scene.camera.fov = (1920*3.2)/document.querySelector('.planet__img').clientWidth;
-      this.scene.camera.updateProjectionMatrix();
-      this.renderer.setSize( ...this.dimensions );
-    }
-
-    window.addEventListener( 'resize', onWindowResize, false );
+    window.addEventListener('resize', this.scene.resizeCamera, false);
   }
 
   onShow() {
-    this.intersectionObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          this.animate();
-        } else {
-          this.stopAnimation();
-        }
-      });
-    }, { threshold: INTERSECTION_THRESHOLD });
+    this.intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            this.animate();
+          } else {
+            this.stopAnimation();
+          }
+        });
+      },
+      { threshold: INTERSECTION_THRESHOLD },
+    );
     this.intersectionObserver.observe(this.renderer.domElement);
   }
-
 }
