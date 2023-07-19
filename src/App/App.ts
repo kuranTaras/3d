@@ -28,7 +28,7 @@ export class App {
     this.onShow();
   }
 
-  public static get dimensions() {
+  public get dimensions() {
     // const container = this.renderer.domElement.parentElement;
 
     const container = document.querySelector('.planet__img');
@@ -36,8 +36,8 @@ export class App {
     return [container.clientWidth, container.clientHeight];
   }
 
-  public static get aspect() {
-    const [w, h] = App.dimensions;
+  public get aspect() {
+    const [w, h] = this.dimensions;
     return w / h;
   }
 
@@ -48,14 +48,14 @@ export class App {
       canvas,
     });
 
-    const [w, h] = App.dimensions;
+    const [w, h] = this.dimensions;
 
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(window.devicePixelRatio);
 
     this.composer = new EffectComposer(this.renderer);
 
-    this.scene = new AppScene(this.renderer, createCamera(App.aspect));
+    this.scene = new AppScene(this.renderer, this);
 
     const { scene, camera } = this.scene;
 
@@ -110,7 +110,7 @@ export class App {
   }
 
   onResize() {
-    window.addEventListener('resize', this.scene.resizeCamera, false);
+    window.addEventListener('resize', () => this.scene.resizeCamera(), false);
   }
 
   onShow() {

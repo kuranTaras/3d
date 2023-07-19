@@ -1,16 +1,18 @@
 import {
   AmbientLight,
   AnimationMixer,
+  Camera,
   Clock,
   EquirectangularReflectionMapping,
   Group,
   LoopOnce,
   Mesh,
   MeshPhysicalMaterial,
+  PerspectiveCamera,
   RectAreaLight,
   Scene,
 } from 'three';
-import { loadGltf, loadHdri } from './utils';
+import { createCamera, loadGltf, loadHdri } from './utils';
 
 import URL_MODEL from 'assets/Lending_Earth.glb';
 import URL_HDRI from 'assets/peppermint_powerplant_2_4k.hdr';
@@ -18,6 +20,7 @@ import { degToRad } from 'three/src/math/MathUtils';
 import { App } from './App';
 
 export class AppScene {
+  public camera: PerspectiveCamera;
   public scene: Scene;
   private mixer: AnimationMixer;
   public clock: Clock;
@@ -26,7 +29,8 @@ export class AppScene {
   public y: number;
   public z: number;
 
-  constructor(private renderer, public camera) {
+  constructor(private renderer, private app) {
+    this.camera = createCamera(app.aspect);
     this.scene = new Scene();
     this.clock = new Clock();
     this.group = new Group();
@@ -117,9 +121,9 @@ export class AppScene {
     this.mixer?.update(delta);
   }
   public resizeCamera() {
-    this.camera.aspect = App.aspect;
+    this.camera.aspect = this.app.aspect;
     // this.scene.camera.fov = (1920 * 3.2) / document.querySelector('.planet__img').clientWidth;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(...App.dimensions);
+    this.renderer.setSize(...this.app.dimensions);
   }
 }
