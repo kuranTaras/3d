@@ -1,7 +1,6 @@
 import {
   AmbientLight,
   AnimationMixer,
-  Camera,
   Clock,
   EquirectangularReflectionMapping,
   Group,
@@ -11,14 +10,16 @@ import {
   PerspectiveCamera,
   RectAreaLight,
   Scene,
+  Vector3,
 } from 'three';
 import { createCamera, loadGltf, loadHdri } from './utils';
 
 import URL_MODEL from 'assets/Lending_Earth.glb';
 import URL_HDRI from 'assets/peppermint_powerplant_2_4k.hdr';
 import { degToRad } from 'three/src/math/MathUtils';
-import { App } from './App';
+import { CAMERA_PADDING, SCENE_DIMENSIONS, SCENE_OFFSET } from './constants';
 
+let cameraOrigin = new Vector3(-1.3, 2.8, 6.08);
 export class AppScene {
   public camera: PerspectiveCamera;
   public scene: Scene;
@@ -48,13 +49,12 @@ export class AppScene {
     this.scene.environment = texture;
 
     const [cam] = gltf.cameras;
-
+    cameraOrigin.copy(cam.position);
     this.camera.copy(cam);
-    this.camera.quaternion.copy(cam.quaternion);
 
     this.scene.rotation.z = degToRad(-10);
-    this.scene.position.y = -1;
-    this.scene.position.x = -0.2;
+
+    this.scene.position.x = -0.25;
 
     const light = new AmbientLight(0x404040); // soft white light
     this.scene.add(light);
@@ -81,18 +81,8 @@ export class AppScene {
   }
 
   addGeometry(model) {
-    const ballsMesh = model.scene as Mesh;
-
-    this.group.add(ballsMesh);
-
-    ballsMesh.position.x = -0.1;
-    // ballsMesh.position.z = -2.78
-    ballsMesh.position.y = -0.5;
-    // ballsMesh.position.z = 1
-
-    // this.group.lookAt(this.camera.position.x,this.camera.position.y,this.camera.position.z)
-    // this.group.position.z = 3
-    this.scene.add(this.group);
+    const mesh = model.scene as Mesh;
+    this.scene.add(mesh);
   }
 
   addAnimation(model) {
@@ -121,8 +111,13 @@ export class AppScene {
     this.mixer?.update(delta);
   }
   public resizeCamera() {
+    // https://discourse.threejs.org/t/camera-zoom-to-fit-object/936/24
     this.camera.aspect = this.app.aspect;
-    // this.scene.camera.fov = (1920 * 3.2) / document.querySelector('.planet__img').clientWidth;
+    const fitHeightDistance = SCENE_DIMENSIONS / (2 * Math.atan((Math.PI * this.camera.fov) / 360));
+    const fitWidthDistance = fitHeightDistance / this.camera.aspect;
+    const distance = CAMERA_PADDING * Math.max(fitHeightDistance, fitWidthDistance);
+    this.camera.position.copy(cameraOrigin).multiplyScalar(distance);
+    this.camera.lookAt(0, SCENE_OFFSET, 0);
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(...this.app.dimensions);
   }

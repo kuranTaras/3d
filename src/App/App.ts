@@ -1,13 +1,11 @@
 import { Clock, ReinhardToneMapping, Vector2, WebGLRenderer } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass';
-import { SAOPass } from 'three/examples/jsm/postprocessing/SAOPass';
-import { ORBIT_DAMPING, INTERSECTION_THRESHOLD } from './constants';
+import { INTERSECTION_THRESHOLD } from './constants';
 import { AppScene } from './Scene';
-import { createCamera, isMobile } from './utils';
+import { isMobile } from './utils';
 
 const IS_DESKTOP = !isMobile();
 
@@ -49,7 +47,7 @@ export class App {
     });
 
     const [w, h] = this.dimensions;
-
+    console.log(w, h);
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(window.devicePixelRatio);
 
@@ -81,13 +79,13 @@ export class App {
 
     // this.composer.addPass(new ShaderPass(OverlayGradient));
 
-    if (IS_DESKTOP) {
-      this.controls = new OrbitControls(camera, this.renderer.domElement);
-      this.controls.enablePan = false;
-      this.controls.enableZoom = false;
-      this.controls.enableDamping = true;
-      this.controls.dampingFactor = ORBIT_DAMPING;
-    }
+    // if (IS_DESKTOP) {
+    //   this.controls = new OrbitControls(camera, this.renderer.domElement);
+    //   this.controls.enablePan = false;
+    //   this.controls.enableZoom = false;
+    //   this.controls.enableDamping = true;
+    //   this.controls.dampingFactor = ORBIT_DAMPING;
+    // }
   }
 
   public animate() {
