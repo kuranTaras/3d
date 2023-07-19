@@ -1,0 +1,10 @@
+/node_modules
+/dist
+/.firebase
+*-error.log
+*.log
+/new
+
+.DS_Store
+
+stats.json
