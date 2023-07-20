@@ -1,7 +1,9 @@
 import {
   AmbientLight,
   AnimationMixer,
+  BackSide,
   Clock,
+  DirectionalLight,
   EquirectangularReflectionMapping,
   Group,
   LoopOnce,
@@ -10,14 +12,15 @@ import {
   PerspectiveCamera,
   RectAreaLight,
   Scene,
+  Vector2,
   Vector3,
 } from 'three';
 import { createCamera, loadGltf, loadHdri } from './utils';
 
-import URL_MODEL from 'assets/Lending_Earth.glb';
+import URL_MODEL from 'assets/Personal_Account.glb';
+
 import URL_HDRI from 'assets/peppermint_powerplant_2_4k.hdr';
-import { degToRad } from 'three/src/math/MathUtils';
-import { CAMERA_PADDING, SCENE_DIMENSIONS, SCENE_OFFSET } from './constants';
+import { CAMERA_PADDING, SCENE_DIMENSIONS } from './constants';
 
 let cameraOrigin = new Vector3(-1.3, 2.8, 6.08);
 export class AppScene {
@@ -49,19 +52,13 @@ export class AppScene {
     this.scene.environment = texture;
 
     const [cam] = gltf.cameras;
+
     cameraOrigin.copy(cam.position);
     this.camera.copy(cam);
 
-    this.scene.rotation.z = degToRad(-10);
-
-    this.scene.position.x = -0.25;
-
-    const light = new AmbientLight(0x404040); // soft white light
-    this.scene.add(light);
-
-    gltf.scene.children.forEach((m) => {
+    gltf.scene.traverse((m) => {
       if (/area\d+/i.test(m.name)) {
-        const areaLight = new RectAreaLight(0xffffff, 0.5);
+        const areaLight = new RectAreaLight(0xffffff, 1);
         areaLight.position.copy(m.position);
         areaLight.quaternion.copy(m.quaternion);
         this.scene.add(areaLight);
@@ -69,12 +66,17 @@ export class AppScene {
 
       const mat = m.material as MeshPhysicalMaterial;
       if (mat) {
-        if (/(dark|coin)/i.test(mat.name)) {
-          mat.clearcoatRoughness = 0.0;
-          mat.roughness = 0;
+        if (/(dark)/i.test(mat.name)) {
+          mat.clearcoatRoughness = 0.01;
+          mat.roughness = 0.2;
           mat.metalness = 0.9;
-          mat.needsUpdate = true;
         }
+        if (/(gold|metal_dark)/i.test(mat.name)) {
+          mat.metalness = 0.9;
+          mat.roughness = 0;
+        }
+
+        mat.needsUpdate = true;
       }
     });
     this.camera.updateProjectionMatrix();
@@ -83,6 +85,12 @@ export class AppScene {
   addGeometry(model) {
     const mesh = model.scene as Mesh;
     this.scene.add(mesh);
+    const light = new AmbientLight(0x404040); // soft white light
+    this.scene.add(light);
+
+    const directionalLight = new DirectionalLight(0xffffff, 10);
+    directionalLight.position.set(0.1, 1, -1).multiplyScalar(2);
+    this.scene.add(directionalLight);
   }
 
   addAnimation(model) {
@@ -117,7 +125,7 @@ export class AppScene {
     const fitWidthDistance = fitHeightDistance / this.camera.aspect;
     const distance = CAMERA_PADDING * Math.max(fitHeightDistance, fitWidthDistance);
     this.camera.position.copy(cameraOrigin).multiplyScalar(distance);
-    this.camera.lookAt(0, SCENE_OFFSET, 0);
+    this.camera.lookAt(0, 0, 0);
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(...this.app.dimensions);
   }

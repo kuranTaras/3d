@@ -1,7 +1,8 @@
-import { Clock, ReinhardToneMapping, Vector2, WebGLRenderer } from 'three';
+import { Clock, PCFSoftShadowMap, ReinhardToneMapping, Vector2, WebGLRenderer } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
+
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass';
 import { INTERSECTION_THRESHOLD } from './constants';
 import { AppScene } from './Scene';
@@ -45,9 +46,11 @@ export class App {
       antialias: true,
       canvas,
     });
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = PCFSoftShadowMap;
 
     const [w, h] = this.dimensions;
-    console.log(w, h);
+
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(window.devicePixelRatio);
 
@@ -64,11 +67,12 @@ export class App {
       0.85,
     );
 
-    bloomPass.threshold = 0.1;
+    bloomPass.threshold = 0.2;
     bloomPass.strength = 0.05;
-    bloomPass.radius = 0.5;
+    bloomPass.radius = 0.05;
 
     const outputPass = new OutputPass(ReinhardToneMapping, 1.1);
+
     this.composer.addPass(bloomPass);
     this.composer.addPass(outputPass);
     this.composer.insertPass(new RenderPass(scene, camera), 0);

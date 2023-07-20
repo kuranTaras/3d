@@ -21,5 +21,5 @@ export const INTERSECTION_THRESHOLD = 0.35;
 export const ANIMATION_SPEED = 0.5;
 
 export const SCENE_OFFSET = 1.5;
-export const CAMERA_PADDING = 0.2;
+export const CAMERA_PADDING = 0.23;
 export const SCENE_DIMENSIONS = 2;
