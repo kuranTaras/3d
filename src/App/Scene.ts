@@ -1,122 +1,98 @@
 import {
-  AnimationClip,
-  AnimationMixer, Clock,
-  Fog, Group, LoopOnce,
+  AmbientLight,
+  AnimationMixer,
+  Clock,
+  EquirectangularReflectionMapping,
+  Group,
+  LoopOnce,
   Mesh,
-  MeshStandardMaterial, PointLight,
+  MeshPhysicalMaterial,
+  PerspectiveCamera,
+  RectAreaLight,
   Scene,
-} from "three";
-import { loadGltf, loadHdri } from "./utils";
+  Vector3,
+} from 'three';
+import { createCamera, loadGltf, loadHdri } from './utils';
 
 import URL_MODEL from 'assets/Lending_Earth.glb';
-import URL_HDRI  from 'assets/studio.hdr';
+import URL_HDRI from 'assets/peppermint_powerplant_2_4k.hdr';
+import { degToRad } from 'three/src/math/MathUtils';
+import { CAMERA_PADDING, SCENE_DIMENSIONS, SCENE_OFFSET } from './constants';
 
-import { ANIMATION_SPEED, MATERIAL_PROPS } from "./constants";
-
-
+let cameraOrigin = new Vector3(-1.3, 2.8, 6.08);
 export class AppScene {
+  public camera: PerspectiveCamera;
   public scene: Scene;
   private mixer: AnimationMixer;
-  public clock: Clock
-    public group: Group
-    public x: number
-    public y: number
-    public z: number
+  public clock: Clock;
+  public group: Group;
+  public x: number;
+  public y: number;
+  public z: number;
 
-  constructor(public camera) {
+  constructor(private renderer, private app) {
+    this.camera = createCamera(app.aspect);
     this.scene = new Scene();
     this.clock = new Clock();
-    this.group = new Group()
-    this.x = -0.37172927066884237;
-    this.y = 3.8338281729372046;
-    this.z = 14.548125957985139;
-    Promise.all([
-      loadHdri(URL_HDRI),
-      loadGltf(URL_MODEL),
-    ]).then(([hdri, gltf]) => {
-      this.configScene(hdri);
+    this.group = new Group();
+
+    Promise.all([loadHdri(URL_HDRI), loadGltf(URL_MODEL)]).then(([hdri, gltf]) => {
+      this.configScene(hdri, gltf);
       this.addGeometry(gltf);
       this.addAnimation(gltf);
-    })
+      this.resizeCamera();
+    });
   }
 
-  configScene(texture) {
+  configScene(texture, gltf) {
+    texture.mapping = EquirectangularReflectionMapping;
+    this.scene.environment = texture;
 
-    this.camera.fov = (1920*3.2)/document.querySelector('.planet__img').clientWidth;
+    const [cam] = gltf.cameras;
+    cameraOrigin.copy(cam.position);
+    this.camera.copy(cam);
 
+    this.scene.rotation.z = degToRad(-10);
 
+    this.scene.position.x = -0.25;
 
+    const light = new AmbientLight(0x404040); // soft white light
+    this.scene.add(light);
 
+    gltf.scene.children.forEach((m) => {
+      if (/area\d+/i.test(m.name)) {
+        const areaLight = new RectAreaLight(0xffffff, 0.5);
+        areaLight.position.copy(m.position);
+        areaLight.quaternion.copy(m.quaternion);
+        this.scene.add(areaLight);
+      }
 
-    this.camera.position.x = -3.37172927066884237
-    this.camera.position.y = 4.8338281729372046
-    this.camera.position.z = 14.548125957985139
-
-
-    this.scene.rotation.z = -0.15
-
-    this.scene.position.y = -1
+      const mat = m.material as MeshPhysicalMaterial;
+      if (mat) {
+        if (/(dark|coin)/i.test(mat.name)) {
+          mat.clearcoatRoughness = 0.0;
+          mat.roughness = 0;
+          mat.metalness = 0.9;
+          mat.needsUpdate = true;
+        }
+      }
+    });
     this.camera.updateProjectionMatrix();
-
-
-    // Add ambient light
-    const pointLight = new PointLight(0xFFFFFF, 60);
-    pointLight.position.set(this.x, this.y, this.z);
-    this.scene.add(pointLight);
-
-
-    // document.querySelector('.plusingY').addEventListener('click' , () => plusY(this.scene, this.camera))
-    // document.querySelector('.plusingX').addEventListener('click' , () => plusX(this.scene,this.camera))
-    // document.querySelector('.plusingZ').addEventListener('click' , () => plusZ(this.scene,this.camera))
-    //
-    // function plusY (camera,scene) {
-    //
-    //   camera.rotation.y = camera.rotation.y + 0.5
-    //
-    //   console.log('y' + camera.rotation.y)
-    //
-    //   scene.updateProjectionMatrix()
-    // }
-    // function plusX (camera,scene) {
-    //   console.log(camera);
-    //   camera.rotation.x = camera.rotation.x + 0.5
-    //
-    //   console.log('x' +camera.rotation.x)
-    //   scene.updateProjectionMatrix()
-    // }
-    // function plusZ (camera,scene) {
-    //   camera.rotation.z=  camera.rotation.z - 0.1
-    //
-    //   console.log('z' +camera.rotation.z)
-    //   scene.updateProjectionMatrix()
-    // }
-    // this.scene.fog = new Fog(0x000000, 100, 100.00);
   }
 
-  addGeometry (model) {
-    const ballsMesh= model.scene as Mesh;
-
-    this.group.add(ballsMesh)
-
-
-    ballsMesh.position.x = -0.1
-    // ballsMesh.position.z = -2.78
-    ballsMesh.position.y = -0.5
-    // ballsMesh.position.z = 1
-
-    // this.group.lookAt(this.camera.position.x,this.camera.position.y,this.camera.position.z)
-    // this.group.position.z = 3
-    this.scene.add(this.group)
+  addGeometry(model) {
+    const mesh = model.scene as Mesh;
+    this.scene.add(mesh);
   }
 
-  addAnimation (model) {
-    const {animations, scene} = model;
+  addAnimation(model) {
+    const { animations, scene } = model;
     this.mixer = new AnimationMixer(scene);
-    for (let i = 0; i < animations.length; i++){
-      const elem = animations[i]
-      let action = this.mixer.clipAction(elem)
-      action.play()
-      action.setLoop(LoopOnce, 1)
+    for (let i = 0; i < animations.length; i++) {
+      const elem = animations[i];
+      let action = this.mixer.clipAction(elem);
+      action.play();
+      action.setLoop(LoopOnce, 1);
       action.clampWhenFinished = true;
       // setTimeout(()=> {
       //   action.timeScale = 0
@@ -126,15 +102,23 @@ export class AppScene {
     //   action = this.mixer.clipAction( clip );
     // return action
 
-
     // action.play()
-
 
     // action.play();
   }
 
-
-  public animate (delta) {
+  public animate(delta) {
     this.mixer?.update(delta);
+  }
+  public resizeCamera() {
+    // https://discourse.threejs.org/t/camera-zoom-to-fit-object/936/24
+    this.camera.aspect = this.app.aspect;
+    const fitHeightDistance = SCENE_DIMENSIONS / (2 * Math.atan((Math.PI * this.camera.fov) / 360));
+    const fitWidthDistance = fitHeightDistance / this.camera.aspect;
+    const distance = CAMERA_PADDING * Math.max(fitHeightDistance, fitWidthDistance);
+    this.camera.position.copy(cameraOrigin).multiplyScalar(distance);
+    this.camera.lookAt(0, SCENE_OFFSET, 0);
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(...this.app.dimensions);
   }
 }
