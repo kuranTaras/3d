@@ -2,7 +2,8 @@ import './types.d';
 import './index.scss';
 
 import { App } from './App/App';
-import { App2 } from './App2/App';
+import SceneSafe from './App/SceneSafe';
+import ScenePlanet from './App/ScenePlanet';
 
 let canvas1;
 
@@ -39,6 +40,14 @@ if (document.querySelector('.tabs__img')) {
 }
 
 window.addEventListener('load', () => {
-  const app = new App(canvas1);
-  // const app2 = new App2(canvas2);
+  const planet = new App(canvas1, ScenePlanet, {
+    bloomPassThreshold: 0.1,
+    bloomPassStrength: 0.05,
+    bloomPassRadius: 0.5,
+  });
+  const safe = new App(canvas2, SceneSafe, {
+    bloomPassThreshold: 0.2,
+    bloomPassStrength: 0.05,
+    bloomPassRadius: 0.05,
+  });
 });

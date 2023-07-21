@@ -2,9 +2,9 @@ import { Clock, ReinhardToneMapping, Vector2, WebGLRenderer } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
+
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass';
 import { INTERSECTION_THRESHOLD } from './constants';
-import { AppScene } from './Scene';
 import { isMobile } from './utils';
 
 const IS_DESKTOP = !isMobile();
@@ -19,17 +19,17 @@ export class App {
   private controls;
   private intersectionObserver;
 
-  constructor(canvas) {
+  constructor(canvas, scene, initProps = {}) {
     this.clock = new Clock();
-    this.init(canvas);
+    this.init(canvas, scene, initProps);
     this.onResize();
     this.onShow();
   }
 
   public get dimensions() {
-    // const container = this.renderer.domElement.parentElement;
+    const container = this.renderer.domElement.parentElement;
 
-    const container = document.querySelector('.planet__img');
+    // const container = document.querySelector('.planet__img');
 
     return [container.clientWidth, container.clientHeight];
   }
@@ -39,7 +39,7 @@ export class App {
     return w / h;
   }
 
-  private init(canvas) {
+  private init(canvas, sceneClass, props: any = {}) {
     this.renderer = new WebGLRenderer({
       alpha: true,
       antialias: true,
@@ -47,13 +47,13 @@ export class App {
     });
 
     const [w, h] = this.dimensions;
-    console.log(w, h);
+
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(window.devicePixelRatio);
 
     this.composer = new EffectComposer(this.renderer);
 
-    this.scene = new AppScene(this.renderer, this);
+    this.scene = new sceneClass(this.renderer, this);
 
     const { scene, camera } = this.scene;
 
@@ -64,11 +64,16 @@ export class App {
       0.85,
     );
 
-    bloomPass.threshold = 0.1;
-    bloomPass.strength = 0.05;
-    bloomPass.radius = 0.5;
+    // bloomPass.threshold = 0.2;
+    // bloomPass.strength = 0.05;
+    // bloomPass.radius = 0.05;
+
+    bloomPass.threshold = props.bloomPassThreshold;
+    bloomPass.strength = props.bloomPassStrength;
+    bloomPass.radius = props.bloomPassRadius;
 
     const outputPass = new OutputPass(ReinhardToneMapping, 1.1);
+
     this.composer.addPass(bloomPass);
     this.composer.addPass(outputPass);
     this.composer.insertPass(new RenderPass(scene, camera), 0);
